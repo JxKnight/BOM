@@ -35,45 +35,109 @@ namespace BOM.Controllers
         {
             SqlCommand cmd = new SqlCommand();
             Merchant.Merchant1 merchant = new Merchant.Merchant1();
+            List<Merchant.Merchant1> list = new List<Merchant.Merchant1>();
+            SqlDataReader sqlReader;
+            string query = string.Empty;
             System.Net.Http.Headers.HttpRequestHeaders headers = this.Request.Headers;
             if (headers.Contains("MerchantCode"))
             {
                 cmd.Parameters.AddWithValue("@Merchantcode", headers.GetValues("MerchantCode").First());
-                string query = "select * from Merchant with(nolock) where MerchantCode = @Merchantcode";
-                using (SqlDataReader sqlReader = dataAccess.queryDB(query, cmd))
+                query = "select top 1 * from Merchant with(nolock) where MerchantCode = @Merchantcode";
+                sqlReader = dataAccess.queryDB(query, cmd);
+                if (sqlReader.Read())
                 {
-                    while (sqlReader.Read())
+                    merchant.MerchantCode = sqlReader["MerchantCode"].ToString();
+                    merchant.MerchantName = sqlReader["MerchantName"].ToString();
+                    merchant.MPhoneNumber = new List<string>(sqlReader["MPhoneNumber"].ToString().Split('/'));
+                    merchant.MAddress1 = sqlReader["MAddress1"].ToString();
+                    merchant.MAddress2 = sqlReader["MAddress2"].ToString();
+                    merchant.MPostCode = sqlReader["MPostCode"].ToString();
+                    merchant.MCity = sqlReader["MCity"].ToString();
+                    merchant.MState = sqlReader["MState"].ToString();
+                    if (headers.Contains("SubMerchant") && Convert.ToInt32(headers.GetValues("SubMerchant").First())>0)
                     {
-                        merchant.MerchantCode = sqlReader["MerchantCode"].ToString();
-                        merchant.MerchantName = sqlReader["MerchantName"].ToString();
-                        merchant.MPhoneNumber = new List<string>(sqlReader["MPhoneNumber"].ToString().Split('/'));
-                        merchant.MAddress1 = sqlReader["MAddress1"].ToString();
-                        merchant.MAddress2 = sqlReader["MAddress2"].ToString();
-                        merchant.MPostCode = sqlReader["MPostCode"].ToString();
-                        merchant.MCity = sqlReader["MCity"].ToString();
-                        merchant.MState = sqlReader["MState"].ToString();
+                        list.Add(merchant);
+                        List<string> merchantcode = new List<string>();
+                        query = "select top "+ Convert.ToInt32(headers.GetValues("SubMerchant").First()) + " MerchantCode from MerchantCount with(nolock) where MainMerchantCode = @Merchantcode";
+                        sqlReader = dataAccess.queryDB(query, cmd);
+                        while (sqlReader.Read())
+                        {
+                            merchantcode.Add(sqlReader["MerchantCode"].ToString());
+                        }
+                        if (merchantcode.Count > 0)
+                        {
+                            cmd = new SqlCommand();
+                            cmd.Parameters.AddWithValue("@MerchantCodes", string.Join(",", merchantcode.ToArray()));
+                            query = "select * from merchant with(nolock) where merchantcode in (@MerchantCodes)";
+                            sqlReader = dataAccess.queryDB(query, cmd);
+                            while (sqlReader.Read())
+                            {
+                                merchant = new Merchant.Merchant1();
+                                merchant.MerchantCode = sqlReader["MerchantCode"].ToString();
+                                merchant.MerchantName = sqlReader["MerchantName"].ToString();
+                                merchant.MPhoneNumber = new List<string>(sqlReader["MPhoneNumber"].ToString().Split('/'));
+                                merchant.MAddress1 = sqlReader["MAddress1"].ToString();
+                                merchant.MAddress2 = sqlReader["MAddress2"].ToString();
+                                merchant.MPostCode = sqlReader["MPostCode"].ToString();
+                                merchant.MCity = sqlReader["MCity"].ToString();
+                                merchant.MState = sqlReader["MState"].ToString();
+                                list.Add(merchant);
+                            }
+                            if (list.Count > 1)
+                            {
+                                error.Data = list;
+                                error.ReturnCode = 200;
+                                error.Message = "Get Success";
+                                return error;
+                            }
+                            else
+                            {
+                                error.Data = merchant;
+                                error.ReturnCode = 200;
+                                error.Message = "Get Success";
+                                return error;
+                            }
+                        }
+                        else
+                        {
+                            error.Data = merchant;
+                            error.ReturnCode = 200;
+                            error.Message = "Get Success";
+                            return error;
+                        }
+                    }
+                    else
+                    {
                         error.Data = merchant;
                         error.ReturnCode = 200;
                         error.Message = "Get Success";
                         return error;
                     }
                 }
+                else
+                {
+                    error.Data = headers.GetValues("MerchantCode").First();
+                    error.ReturnCode = 401;
+                    error.Message = "Get Merchant Fail";
+                    return error;
+                }
+
             }
             else
             {
-                string query = string.Empty;
-                if (headers.Contains("HowMany"))
+                List<AddMerchant> merchanntList = new List<AddMerchant>();
+                if (headers.Contains("Null"))
                 {
-                    query = "select top " + headers.GetValues("HowMany").First() + " * from merchant with(nolock)";
+                    query = "select * from merchant with(nolock) where merchantcode = null";
                 }
                 else
                 {
-                    query = "select top 10 * from merchant with(nolock)";
+                    query = "select * from merchant with(nolock)";
                 }
-                List<AddMerchant> merchanntList = new List<AddMerchant>();
-                using (SqlDataReader sqlReader = dataAccess.queryDB(query, cmd))
+                sqlReader = dataAccess.queryDB(query, cmd);
+                while (sqlReader.Read())
                 {
-                    while (sqlReader.Read())
+                    if (headers.Contains("Null"))
                     {
                         AddMerchant merchant1 = new AddMerchant();
                         merchant1.MerchantName = sqlReader["MerchantName"].ToString();
@@ -85,16 +149,32 @@ namespace BOM.Controllers
                         merchant1.MState = sqlReader["MState"].ToString();
                         merchanntList.Add(merchant1);
                     }
-                    error.Data = merchanntList;
-                    error.ReturnCode = 200;
-                    error.Message = "Get Success";
-                    return error;
+                    else
+                    {
+                        Merchant.Merchant1 merchant1 = new Merchant.Merchant1();
+                        merchant1.MerchantCode = sqlReader["MerchantCode"].ToString();
+                        merchant1.MerchantName = sqlReader["MerchantName"].ToString();
+                        merchant1.MPhoneNumber = new List<string>(sqlReader["MPhoneNumber"].ToString().Split('/'));
+                        merchant1.MAddress1 = sqlReader["MAddress1"].ToString();
+                        merchant1.MAddress2 = sqlReader["MAddress2"].ToString();
+                        merchant1.MPostCode = sqlReader["MPostCode"].ToString();
+                        merchant1.MCity = sqlReader["MCity"].ToString();
+                        merchant1.MState = sqlReader["MState"].ToString();
+                        list.Add(merchant1);
+                    }
                 }
+                if (headers.Contains("Null"))
+                {
+                    error.Data = merchanntList;
+                }
+                else
+                {
+                    error.Data = list;
+                }
+                error.ReturnCode = 200;
+                error.Message = "Get Success";
+                return error;
             }
-            error.Data = null;
-            error.ReturnCode = 400;
-            error.Message = "Error occured";
-            return error;
         }
         [Route("AddMerchant")]
         public Status AddMerchant(InputRequest req)
@@ -461,7 +541,7 @@ namespace BOM.Controllers
             cmd.Parameters.AddWithValue("@Merchantcode", merchantcode);
             string query = "select top 1 * from MerchantCount with(nolock) where MerchantCode = @Merchantcode";
             SqlDataReader sqlReader = dataAccess.queryDB(query, cmd);
-            if(sqlReader.Read())
+            if (sqlReader.Read())
             {
                 return sqlReader["MerchantID"].ToString();
             }
