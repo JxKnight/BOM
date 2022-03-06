@@ -150,20 +150,19 @@ namespace BOM.Utility
             }
             return null;
         }
-        public bool checkTokenFromDB(string merchantid, string sessionString)
+        public string checkTokenFromDB(string sessionString)
         {
             SqlCommand cmd = new SqlCommand();
             cmd.Parameters.AddWithValue("@SessionString", sessionString);
-            cmd.Parameters.AddWithValue("@MerchantId", merchantid);
-            string query = "Select top 1 * from MerchantToken with(nolock) where TokenString = @SessionString and MerchantID = @MerchantId and ExpiredTime >= getDate()";
+            string query = "Select top 1 * from MerchantToken with(nolock) where TokenString = @SessionString and ExpiredTime >= getDate()";
             SqlDataReader dataReader = dataAccess.queryDB(query, cmd);
             if (dataReader.Read())
             {
-                return true;
+               return dataReader["MerchantID"].ToString();
             }
             else
             {
-                return false;
+                return string.Empty;
             }
         }
         public bool UpdateToken(string merchantid)
@@ -254,6 +253,17 @@ namespace BOM.Utility
             else
             {
                 return "No Header Found";
+            }
+        }
+        public string HeaderToken(string tokenString)
+        {
+            if(tokenString.Substring(tokenString.Length - 8) != DateTime.Now.ToString("ddMMyyyy"))
+            {
+                return tokenString.Substring(0, 16);
+            }
+            else
+            {
+                return string.Empty;
             }
         }
     }

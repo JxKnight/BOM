@@ -13,7 +13,6 @@ namespace BOM.Models
     }
     public class InputRequest
     {
-        public string merchantcode { get; set; }
         public string data { get; set; }
     }
 }

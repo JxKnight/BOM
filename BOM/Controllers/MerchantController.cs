@@ -54,11 +54,11 @@ namespace BOM.Controllers
                     merchant.MPostCode = sqlReader["MPostCode"].ToString();
                     merchant.MCity = sqlReader["MCity"].ToString();
                     merchant.MState = sqlReader["MState"].ToString();
-                    if (headers.Contains("SubMerchant") && Convert.ToInt32(headers.GetValues("SubMerchant").First())>0)
+                    if (headers.Contains("SubMerchant") && Convert.ToInt32(headers.GetValues("SubMerchant").First()) > 0)
                     {
                         list.Add(merchant);
                         List<string> merchantcode = new List<string>();
-                        query = "select top "+ Convert.ToInt32(headers.GetValues("SubMerchant").First()) + " MerchantCode from MerchantCount with(nolock) where MainMerchantCode = @Merchantcode";
+                        query = "select top " + Convert.ToInt32(headers.GetValues("SubMerchant").First()) + " MerchantCode from MerchantCount with(nolock) where MainMerchantCode = @Merchantcode";
                         sqlReader = dataAccess.queryDB(query, cmd);
                         while (sqlReader.Read())
                         {
@@ -406,58 +406,73 @@ namespace BOM.Controllers
         {
             System.Net.Http.Headers.HttpRequestHeaders headers = this.Request.Headers;
             string checkHeader = Default.verifyHeader(headers);
+            string newPhoneNum = string.Empty;
             Merchant.Merchant1 merchant;
             if (checkHeader == string.Empty)
             {
-                merchant = JsonConvert.DeserializeObject<Merchant.Merchant1>(Default.DecryptString(headers.GetValues("Token").First(), req.data));
-                Merchant.MerchantCheckSignature check = new Merchant.MerchantCheckSignature() { MerchantCode = merchant.MerchantCode };
-                if (Default.VerifySignature(headers.GetValues("Signature").First(), "S0001", check) && Default.checkTokenFromDB(getMerchantID(req.merchantcode), headers.GetValues("Token").First()) && merchant.MerchantCode == req.merchantcode)
+                string result = Default.HeaderToken(headers.GetValues("Token").First());
+                if (result != string.Empty)
                 {
-                    if (IsAnyNullOrEmpty(merchant))
+                    merchant = JsonConvert.DeserializeObject<Merchant.Merchant1>(Default.DecryptString(result, req.data));
+                    Merchant.MerchantCheckSignature check = new Merchant.MerchantCheckSignature() { MerchantCode = merchant.MerchantCode };
+                    if (Default.VerifySignature(headers.GetValues("Signature").First(), "S0001", check))
                     {
-                        error.ReturnCode = 402;
-                        error.Message = "Fail Edit Merchant, There are null value in the object.";
-                        error.Data = merchant;
-                        return error;
-                    }
-                    else
-                    {
-                        string newPhoneNum = string.Empty;
-                        if (merchant.MPhoneNumber.Count > 0)
+                        if (IsAnyNullOrEmpty(merchant))
                         {
-                            newPhoneNum = string.Join("/", merchant.MPhoneNumber);
-                        }
-                        SqlCommand cmd = new SqlCommand();
-                        cmd.Parameters.AddWithValue("@MerchantCode", merchant.MerchantCode);
-                        cmd.Parameters.AddWithValue("@MerchantName", merchant.MerchantName);
-                        cmd.Parameters.AddWithValue("@MPhoneNumber", newPhoneNum);
-                        cmd.Parameters.AddWithValue("@MAddress1", merchant.MAddress1);
-                        cmd.Parameters.AddWithValue("@MAddress2", merchant.MAddress2);
-                        cmd.Parameters.AddWithValue("@MPostCode", merchant.MPostCode);
-                        cmd.Parameters.AddWithValue("@MCity", merchant.MCity);
-                        cmd.Parameters.AddWithValue("@MState", merchant.MState);
-                        string query = "Update merchant set MerchantName = @MerchantName,MPhoneNumber = @MPhoneNumber,MAddress1 = @MAddress1, MAddress2 = @MAddress2, MPostCode = @MPostCode, MCity = @MCity, MState = @MState where MerchantCode = @MerchantCode";
-                        if (dataAccess.execQuery(query, cmd))
-                        {
-                            error.ReturnCode = 200;
-                            error.Message = "Update Merchant Success";
+                            error.ReturnCode = 402;
+                            error.Message = "Fail Edit Merchant, There are null value in the object.";
                             error.Data = merchant;
                             return error;
                         }
                         else
                         {
-                            error.ReturnCode = 400;
-                            error.Message = "Update Merchant Fail";
-                            error.Data = merchant;
-                            return error;
+                            if (merchant.MPhoneNumber.Count > 0)
+                            {
+                                newPhoneNum = string.Join("/", merchant.MPhoneNumber);
+                            }
+                            else
+                            {
+                                newPhoneNum = merchant.MPhoneNumber.ToString();
+                            }
+                            SqlCommand cmd = new SqlCommand();
+                            cmd.Parameters.AddWithValue("@MerchantCode", merchant.MerchantCode);
+                            cmd.Parameters.AddWithValue("@MerchantName", merchant.MerchantName);
+                            cmd.Parameters.AddWithValue("@MPhoneNumber", newPhoneNum);
+                            cmd.Parameters.AddWithValue("@MAddress1", merchant.MAddress1);
+                            cmd.Parameters.AddWithValue("@MAddress2", merchant.MAddress2);
+                            cmd.Parameters.AddWithValue("@MPostCode", merchant.MPostCode);
+                            cmd.Parameters.AddWithValue("@MCity", merchant.MCity);
+                            cmd.Parameters.AddWithValue("@MState", merchant.MState);
+                            string query = "Update merchant set MerchantName = @MerchantName,MPhoneNumber = @MPhoneNumber,MAddress1 = @MAddress1, MAddress2 = @MAddress2, MPostCode = @MPostCode, MCity = @MCity, MState = @MState where MerchantCode = @MerchantCode";
+                            if (dataAccess.execQuery(query, cmd))
+                            {
+                                error.ReturnCode = 200;
+                                error.Message = "Update Merchant Success";
+                                error.Data = merchant;
+                                return error;
+                            }
+                            else
+                            {
+                                error.ReturnCode = 400;
+                                error.Message = "Update Merchant Fail";
+                                error.Data = merchant;
+                                return error;
+                            }
                         }
+                    }
+                    else
+                    {
+                        error.ReturnCode = 403;
+                        error.Message = "Wrong Signature";
+                        error.Data = merchant;
+                        return error;
                     }
                 }
                 else
                 {
-                    error.ReturnCode = 403;
-                    error.Message = "Wrong Signature";
-                    error.Data = merchant;
+                    error.ReturnCode = 404;
+                    error.Message = "Token Invalid";
+                    error.Data = req.data;
                     return error;
                 }
             }

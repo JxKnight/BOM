@@ -46,11 +46,11 @@ namespace BOM.Controllers
             return error;
         }
         [Route("Test4")]
-        public Status test1()
+        public Status test1(string x)
         {
             error.ReturnCode = 200;
             error.Message = "Success";
-            error.Data = null;
+            error.Data = Default.HeaderToken(x);
             return error;
         }
     }

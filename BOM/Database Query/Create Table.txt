@@ -1,0 +1,14 @@
+﻿create table Merchant (MNum int IDENTITY(1,1), MerchantCode varchar(30),MerchantName varchar(MAX),MPhoneNumber varchar(MAX),MAddress1 varchar(MAX),MAddress2 varchar(MAX),MPostCode int,MCity varchar(MAX),MState varchar(MAX))
+create table MerchantCount (MCount int IDENTITY(1,1), Merchantcode varchar(10),MerchantID int, MainMerchantCode varchar(30))
+
+create table Product (PNum int IDENTITY(1,1),ProductCode varchar(255),ProductPrice Money,ProductPackaging varchar(MAX),ProductDescription varchar(MAX),RawMaterialCode varchar(MAX))
+
+create table SignaturePattern (SPNum int IDENTITY(1,1),SignID varchar(10),SignTable varchar(MAX),SignName varchar(MAX),SignPattern varchar(MAX))
+
+create table MerchantSession (MSNum int IDENTITY(1,1),MerchantID int,SessionString varchar(MAX),CreatedDateTime DATETIME,UpdateDateTime DATETIME,ExpiredTime DATETIME)
+
+create table APILog (APINum int IDENTITY(1,1), MerchantID int, APIName varchar(MAX), RequestDate DATETIME, RespondDate DATETIME,APILog varchar(MAX),CreatedDate DATETIME)
+
+create table RawMaterial (RMNum int IDENTITY(1,1), RawMaterialCode varchar(255),RawMaterialDescription varchar(MAX),RawMaterialCompanyCode varchar(MAX))
+create table RawMaterialCompany (RMCNum int IDENTITY(1,1),RawMaterialCompanyCode varchar(255), RawMaterialCompanyName varchar(MAX),RawMaterialCompanyPhone varchar(MAX),RawMaterialCompanyAddress1 varchar(MAX),RawMaterialCompanyAddress2 varchar(MAX),RawMaterialCompanyPostCode int,RawMaterialCompanyCity varchar(MAX),RawMaterialCompanyState varchar(MAX))
+create table RawMaterialProduct (RMPNum int IDENTITY(1,1),RawMaterialProductCode varchar(255),RawMaterialProductName varchar(MAX),RawMaterialProductDefaultQuantity varchar(MAX),RawMaterialProductPrice MONEY)
